@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff1f6">
+  <title>Our Savings Journal ♡</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="decor decor-one">♡</div><div class="decor decor-two">♡</div><div class="decor decor-three">✿</div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Our Savings Journal">
+      <span class="brand-icon">♡</span><span>our little <b>savings</b></span>
+    </a>
+    <div class="top-actions">
+      <span id="connectionStatus" class="status-pill"><i></i> Menyiapkan...</span>
+      <button id="logoutBtn" class="btn btn-quiet hidden">Keluar</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="setupNotice" class="notice hidden">
+      <b>Supabase belum dikonfigurasi.</b>
+      Buka <code>config.js</code>, lalu isi URL dan anon key dari project Supabase. Petunjuk lengkap ada di README.
+    </section>
+
+    <section id="authSection" class="auth-layout">
+      <div class="auth-art">
+        <div class="photo-frame">
+          <div class="photo-placeholder">
+            <span class="photo-heart">♡</span>
+            <strong>you + me</strong>
+            <small>one little dream at a time</small>
+          </div>
+          <span class="tape tape-left"></span><span class="tape tape-right"></span>
+        </div>
+        <p class="handwritten">A little saved today,<br> a beautiful memory tomorrow.</p>
+      </div>
+      <div class="auth-card">
+        <div class="eyebrow">OUR SHARED JOURNAL</div>
+        <h1>Menabung <em>bareng</em>,<br>bermimpi bareng.</h1>
+        <p class="muted">Tempat kecil untuk mencatat usaha kalian menuju impian bersama. Setiap Senin, satu langkah baru. ♡</p>
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login">Masuk</button>
+          <button class="auth-tab" data-mode="signup">Buat akun</button>
+        </div>
+        <form id="authForm">
+          <label for="emailInput">Email</label>
+          <input id="emailInput" type="email" autocomplete="email" placeholder="kamu@email.com" required>
+          <label for="passwordInput">Password</label>
+          <input id="passwordInput" type="password" autocomplete="current-password" minlength="6" placeholder="Minimal 6 karakter" required>
+          <button id="authSubmit" class="btn btn-primary full" type="submit">Masuk ke jurnal <span>♡</span></button>
+          <p id="authMessage" class="form-message" role="status"></p>
+        </form>
+        <p class="tiny-note">Buat akun untuk kalian berdua. Akun hanya bisa melihat jurnal pasangan setelah ditambahkan sebagai anggota oleh pemilik project.</p>
+      </div>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">OUR LITTLE PLAN · 2026</div>
+          <h1>Pelan-pelan,<br><em>jadi kenyataan.</em></h1>
+          <p>Setiap Senin adalah janji kecil untuk masa depan kalian.</p>
+          <div class="hero-tags"><span>♡ konsisten</span><span>♡ saling dukung</span><span>♡ satu tujuan</span></div>
+        </div>
+        <div class="hero-photo-wrap">
+          <div id="couplePhoto" class="couple-photo">
+            <div class="photo-placeholder dashboard-placeholder"><span class="photo-heart">♡</span><strong>your photo here</strong><small>Ganti di pengaturan foto</small></div>
+          </div>
+          <div class="photo-caption">our favorite team <span>♥</span></div>
+        </div>
+      </section>
+
+      <section class="summary-grid">
+        <article class="summary-card total-card">
+          <div class="card-icon">♡</div><p>Total tabungan bersama</p>
+          <h2 id="totalAmount">Rp0</h2>
+          <div class="progress-meta"><span id="progressLabel">0% dari target</span><span id="remainingAmount">Sisa Rp1.000.000</span></div>
+          <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span class="mini-icon pink">♡</span><span class="tiny-label">KAMU</span></div>
+          <h2 id="myTotal">Rp0</h2><p id="myName">Tabungan kamu</p><div class="card-bottom"><span id="myWeeks">0 setoran</span><span>♡</span></div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span class="mini-icon lilac">♡</span><span class="tiny-label">PASANGAN</span></div>
+          <h2 id="partnerTotal">Rp0</h2><p id="partnerName">Tabungan pasangan</p><div class="card-bottom"><span id="partnerWeeks">0 setoran</span><span>♡</span></div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel journal-panel">
+          <div class="panel-heading">
+            <div><div class="eyebrow">WEEKLY CHECK-IN</div><h2>Jurnal mingguan <span>♡</span></h2></div>
+            <span id="currentWeekBadge" class="week-badge">Minggu ini</span>
+          </div>
+          <div class="weekly-callout">
+            <div class="calendar-icon"><span>MON</span><b id="nextMondayDay">--</b></div>
+            <div class="weekly-copy"><b>Setoran hari Senin</b><span>Rp25.000 per orang · Rp50.000 berdua</span><small id="weekDateText">Catat setoran minggu ini di bawah.</small></div>
+          </div>
+          <div class="deposit-list">
+            <div class="deposit-row">
+              <div class="avatar avatar-pink">♡</div><div class="deposit-person"><b id="depositMyName">Kamu</b><small id="myDepositStatus">Belum dicatat minggu ini</small></div>
+              <span class="deposit-amount">Rp25.000</span><button id="depositMeBtn" class="btn btn-small btn-primary">Catat</button>
+            </div>
+            <div class="deposit-row">
+              <div class="avatar avatar-purple">♡</div><div class="deposit-person"><b id="depositPartnerName">Pasangan</b><small id="partnerDepositStatus">Menunggu pasangan</small></div>
+              <span class="deposit-amount">Rp25.000</span><span id="partnerStatusPill" class="pending-pill">Menunggu</span>
+            </div>
+          </div>
+          <p class="privacy-note"><span>✦</span> Setoran dicatat satu kali per orang per minggu. Setelah tersimpan, catatan tidak bisa digandakan.</p>
+          <div id="journalMessage" class="form-message" role="status"></div>
+        </article>
+
+        <article class="panel goal-panel">
+          <div class="panel-heading"><div><div class="eyebrow">OUR DREAM</div><h2>Target bersama</h2></div><span class="goal-sparkle">✧</span></div>
+          <div class="goal-illustration"><span class="goal-heart">♡</span><span class="sparkle s1">✦</span><span class="sparkle s2">✧</span><span class="sparkle s3">·</span></div>
+          <p class="goal-caption">Satu tujuan, dua orang yang saling mendukung.</p>
+          <div class="goal-amounts"><span>Target</span><b>Rp1.000.000</b></div>
+          <div class="progress-track goal-track"><div id="goalProgressBar" class="progress-bar"></div></div>
+          <p id="goalHint" class="goal-hint">Kalian pasti bisa, satu Senin demi satu Senin. ♡</p>
+          <div class="goal-stats"><div><b id="weeksTogether">0</b><span>Minggu menabung</span></div><div><b id="goalEta">20</b><span>Minggu untuk target*</span></div></div>
+          <small class="tiny-note">*Perkiraan dari Rp0 dengan setoran lengkap Rp50.000 setiap minggu.</small>
+        </article>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-heading history-heading">
+          <div><div class="eyebrow">LITTLE STEPS ADD UP</div><h2>Riwayat tabungan</h2><p class="muted">Setiap catatan adalah langkah kecil menuju impian kalian.</p></div>
+          <div class="history-controls"><select id="historyFilter" aria-label="Filter riwayat"><option value="all">Semua setoran</option><option value="mine">Setoran saya</option><option value="partner">Setoran pasangan</option></select></div>
+        </div>
+        <div id="historyList" class="history-list"><div class="empty-state">Riwayat akan muncul setelah setoran dicatat. ♡</div></div>
+      </section>
+
+      <section class="bottom-grid">
+        <article class="panel note-panel">
+          <div class="panel-heading"><div><div class="eyebrow">A NOTE FOR US</div><h2>Catatan kecil</h2></div><span class="note-heart">♡</span></div>
+          <p class="muted">Tulis pengingat atau tujuan yang ingin kalian capai bersama.</p>
+          <textarea id="coupleNote" rows="3" maxlength="500" placeholder="Contoh: Kita nabung untuk jalan-jalan bareng..."></textarea>
+          <div class="note-actions"><span id="noteStatus" class="tiny-note">Catatan tersimpan online.</span><button id="saveNoteBtn" class="btn btn-outline">Simpan catatan</button></div>
+        </article>
+        <article class="panel settings-panel">
+          <div class="panel-heading"><div><div class="eyebrow">MAKE IT YOURS</div><h2>Personalisasi</h2></div><span>✿</span></div>
+          <label for="myDisplayName">Nama panggilan kamu</label><input id="myDisplayName" maxlength="40" placeholder="Contoh: Farel">
+          <label for="partnerDisplayName">Nama panggilan pasangan</label><input id="partnerDisplayName" maxlength="40" placeholder="Contoh: Sayang">
+          <label for="photoUrlInput">URL foto kalian (opsional)</label><input id="photoUrlInput" type="url" placeholder="https://...">
+          <p class="tiny-note">Gunakan tautan gambar publik. Hindari mengunggah foto pribadi ke layanan publik tanpa persetujuan pasangan.</p>
+          <button id="saveSettingsBtn" class="btn btn-outline full">Simpan personalisasi</button>
+          <p id="settingsMessage" class="form-message"></p>
+        </article>
+      </section>
+      <footer class="footer">dibuat dengan banyak ♡ untuk perjalanan kalian · <span id="syncText">Sinkronisasi online</span></footer>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
