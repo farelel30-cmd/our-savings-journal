@@ -48,8 +48,12 @@
     $("myDisplayName").value=settings?.my_name||"";$("partnerDisplayName").value=settings?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
-    if(settings?.photo_url){photo.innerHTML=`<img src="${esc(settings.photo_url)}" alt="Foto kalian bersama" referrerpolicy="no-referrer" onerror="this.parentElement.innerHTML='<div class=&quot;photo-placeholder dashboard-placeholder&quot;><span class=&quot;photo-heart&quot;>♡</span><strong>your photo here</strong><small>Periksa URL foto</small></div>'">`;}
-    else photo.innerHTML='<div class="photo-placeholder dashboard-placeholder"><span class="photo-heart">♡</span><strong>your photo here</strong><small>Ganti di pengaturan foto</small></div>';
+    const defaultCouplePhoto="Screenshot%202026-10-14%20000037.png";
+    if(settings?.photo_url){
+      photo.innerHTML=`<img src="${esc(settings.photo_url)}" alt="Our favorite team" class="couple-photo-image" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='Screenshot%202026-10-14%20000037.png';">`;
+    } else {
+      photo.innerHTML=`<img src="${defaultCouplePhoto}" alt="Our favorite team" class="couple-photo-image">`;
+    }
     renderHistory();
   };
   const renderHistory = () => {
