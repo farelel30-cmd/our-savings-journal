@@ -12,12 +12,15 @@ main{max-width:1124px;margin:0 auto;padding:16px 24px 44px}.auth-layout{display:
 @media(max-width:600px){.topbar{height:68px;padding:0 17px}.brand{font-size:17px}.status-pill{font-size:0;padding:10px}.status-pill i{width:8px;height:8px}.top-actions{gap:7px}main{padding:10px 13px 28px}.auth-layout{grid-template-columns:1fr;gap:30px;margin:15px auto 35px}.auth-art{display:none}.auth-card{padding:26px 22px}.auth-card h1{font-size:34px}.hero{grid-template-columns:1fr;padding:27px 22px 25px;gap:24px}.hero h1{font-size:37px}.hero-photo-wrap{width:150px}.couple-photo{width:150px;height:145px}.hero:after{right:-5%;top:20%;font-size:145px}.summary-grid{gap:10px}.summary-card{padding:17px}.total-card{padding:20px}.summary-card h2{font-size:21px}.total-card h2{font-size:29px}.progress-meta{font-size:8px}.content-grid{gap:0}.panel{padding:19px;margin-bottom:13px}.panel-heading h2{font-size:21px}.weekly-callout{padding:11px;gap:10px}.weekly-copy span{font-size:9px}.deposit-row{gap:7px}.deposit-amount{font-size:10px}.deposit-person b{font-size:10px}.deposit-person small{font-size:8px}.btn-small{padding:8px 9px}.pending-pill,.done-pill{padding:6px 7px;font-size:8px}.goal-panel{display:block}.goal-illustration{height:130px}.goal-caption{margin-bottom:18px}.goal-amounts,.goal-track,.goal-hint,.goal-stats,.goal-panel>.tiny-note{grid-column:auto}.history-panel{padding:19px}.history-heading{align-items:flex-start;flex-direction:column}.history-controls,.history-controls select{width:100%}.history-item{grid-template-columns:40px 1fr auto;gap:9px}.history-date{width:40px;height:40px}.history-value{font-size:10px}.bottom-grid{grid-template-columns:1fr;gap:0}.note-actions{align-items:flex-start;flex-direction:column}.note-actions .btn{width:100%}.footer{line-height:1.7}.decor-one{left:-22px;font-size:65px}.decor-two{right:-20px;font-size:90px}}
 
 .goal-photo-image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: clamp(220px, 40vw, 350px);
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  border-radius: 24px;
+  border-radius: inherit;
+  z-index: 1;
 }
 
 .couple-photo {
