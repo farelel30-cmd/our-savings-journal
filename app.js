@@ -44,7 +44,7 @@
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
     const today = new Date();
     const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-    const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/\\./g,"").toUpperCase();
+    const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
     $("currentDayLabel").textContent=todayShort;
     $("currentWeekBadge").textContent=`Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
     $("nextMondayDay").textContent=today.getDate();
