@@ -3,7 +3,7 @@
   const cfg = window.APP_CONFIG || {};
   const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes("YOUR_PROJECT_ID")
     && cfg.SUPABASE_ANON_KEY && !cfg.SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
-  let supabase = null, currentUser = null, mode = "login", entries = [], settings = null, noteText = "";
+  let supabase = null, currentUser = null, mode = "login", entries = [], settings = null, preferences = [], noteText = "";
   const money = (n) => new Intl.NumberFormat("id-ID", {style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n||0));
   const dateFmt = (s, options={day:"numeric",month:"short",year:"numeric"}) => new Intl.DateTimeFormat("id-ID", options).format(new Date(s+"T12:00:00"));
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -38,9 +38,14 @@
   const showApp = () => {$("authSection").classList.add("hidden");$("appSection").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");};
   const ownEntry = (week=thisMonday) => entries.find(e=>e.week_start===week && e.user_id===currentUser.id);
   const partnerEntries = () => entries.filter(e=>e.user_id!==currentUser.id);
+  const ownPreference = () => preferences.find(p => p.user_id === currentUser?.id) || null;
+  const partnerPreference = () => preferences.find(p => p.user_id !== currentUser?.id) || null;
+  const displayMyName = () => ownPreference()?.my_name?.trim() || currentUser?.email?.split("@")[0] || "Kamu";
+  const displayPartnerName = () => partnerPreference()?.my_name?.trim() || "Pasangan";
   const nameFor = (uid) => {
-    if(uid===currentUser?.id) return settings?.my_name || currentUser?.email?.split("@")[0] || "Kamu";
-    return settings?.partner_name || "Pasangan";
+    const preference = preferences.find(p => p.user_id === uid);
+    if(uid === currentUser?.id) return preference?.my_name?.trim() || currentUser?.email?.split("@")[0] || "Kamu";
+    return preference?.my_name?.trim() || "Pasangan";
   };
   const render = () => {
     const my = entries.filter(e=>e.user_id===currentUser.id);
@@ -50,9 +55,9 @@
     $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);
     $("progressLabel").textContent=`${pct}% dari target`;$("remainingAmount").textContent=total>=target?"Target tercapai! ♡":`Sisa ${money(target-total)}`;
     $("progressBar").style.width=`${pct}%`;$("goalProgressBar").style.width=`${pct}%`;
-    $("myName").textContent=settings?.my_name||"Tabungan kamu";$("partnerName").textContent=settings?.partner_name||"Tabungan pasangan";
+    $("myName").textContent=displayMyName();$("partnerName").textContent=displayPartnerName();
     $("myWeeks").textContent=`${my.length} setoran`; $("partnerWeeks").textContent=`${partner.length} setoran`;
-    $("depositMyName").textContent=nameFor(currentUser.id);$("depositPartnerName").textContent=settings?.partner_name||"Pasangan";
+    $("depositMyName").textContent=displayMyName();$("depositPartnerName").textContent=displayPartnerName();
     const me=ownEntry(); const partnerEntry=entries.find(e=>e.week_start===thisMonday&&e.user_id!==currentUser.id);
     $("myDepositStatus").textContent=me?`Sudah dicatat · ${dateFmt(me.created_at.slice(0,10))}`:"Belum dicatat minggu ini";
     $("partnerDepositStatus").textContent=partnerEntry?"Sudah dicatat minggu ini":"Menunggu pasangan";
@@ -62,7 +67,7 @@
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
     updateWeeklyCalendar();
-    $("myDisplayName").value=settings?.my_name||"";$("partnerDisplayName").value=settings?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
+    $("myDisplayName").value=ownPreference()?.my_name||"";$("partnerDisplayName").value=displayPartnerName();$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
     const defaultCouplePhoto="Screenshot%202026-10-14%20000037.png";
@@ -86,14 +91,15 @@
   };
   async function loadData(){
     setConnection("Menyinkronkan...");
-    const [entriesRes, settingsRes, noteRes] = await Promise.all([
+    const [entriesRes, settingsRes, noteRes, preferencesRes] = await Promise.all([
       supabase.from("savings_entries").select("*").eq("couple_id",cfg.COUPLE_ID).order("week_start",{ascending:false}),
       supabase.from("couple_settings").select("*").eq("couple_id",cfg.COUPLE_ID).maybeSingle(),
-      supabase.from("couple_notes").select("*").eq("couple_id",cfg.COUPLE_ID).maybeSingle()
+      supabase.from("couple_notes").select("*").eq("couple_id",cfg.COUPLE_ID).maybeSingle(),
+      supabase.from("couple_member_preferences").select("*").eq("couple_id",cfg.COUPLE_ID)
     ]);
-    const err=[entriesRes.error,settingsRes.error,noteRes.error].find(Boolean);
+    const err=[entriesRes.error,settingsRes.error,noteRes.error,preferencesRes.error].find(Boolean);
     if(err) throw err;
-    entries=entriesRes.data||[];settings=settingsRes.data||null;noteText=noteRes.data?.note||"";
+    entries=entriesRes.data||[];settings=settingsRes.data||null;preferences=preferencesRes.data||[];noteText=noteRes.data?.note||"";
     render();setConnection("Tersinkron online","online");$("syncText").textContent="Data tersinkron online";
   }
   async function deposit(){
@@ -109,10 +115,17 @@
     await loadData();
   }
   async function saveSettings(){
-    const payload={couple_id:cfg.COUPLE_ID,my_name:$("myDisplayName").value.trim(),partner_name:$("partnerDisplayName").value.trim(),photo_url:$("photoUrlInput").value.trim()||null,updated_by:currentUser.id};
-    if(payload.photo_url){try{const u=new URL(payload.photo_url);if(!["https:","http:"].includes(u.protocol))throw new Error();}catch{setMessage("settingsMessage","URL foto harus berupa tautan http/https yang valid.");return;}}
-    const {error}=await supabase.from("couple_settings").upsert(payload,{onConflict:"couple_id"});
-    if(error){setMessage("settingsMessage",`Gagal menyimpan. Pastikan akunmu sudah ditambahkan sebagai anggota. ${error.message}`);return;}
+    const myName=$("myDisplayName").value.trim();
+    const photoUrl=$("photoUrlInput").value.trim()||null;
+    if(photoUrl){try{const u=new URL(photoUrl);if(!["https:","http:"].includes(u.protocol))throw new Error();}catch{setMessage("settingsMessage","URL foto harus berupa tautan http/https yang valid.");return;}}
+    const {error:preferenceError}=await supabase.from("couple_member_preferences").upsert({
+      couple_id:cfg.COUPLE_ID,user_id:currentUser.id,my_name:myName,partner_name:displayPartnerName(),updated_at:new Date().toISOString()
+    },{onConflict:"couple_id,user_id"});
+    if(preferenceError){setMessage("settingsMessage",`Gagal menyimpan nama. ${preferenceError.message}`);return;}
+    const {error:photoError}=await supabase.from("couple_settings").upsert({
+      couple_id:cfg.COUPLE_ID,photo_url:photoUrl,updated_by:currentUser.id
+    },{onConflict:"couple_id"});
+    if(photoError){setMessage("settingsMessage",`Nama tersimpan, tetapi foto gagal disimpan: ${photoError.message}`);return;}
     setMessage("settingsMessage","Personalisasi tersimpan! ♡",true);await loadData();
   }
   async function saveNote(){
@@ -204,6 +217,7 @@
       .on("postgres_changes",{event:"*",schema:"public",table:"savings_entries",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .on("postgres_changes",{event:"*",schema:"public",table:"couple_settings",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .on("postgres_changes",{event:"*",schema:"public",table:"couple_notes",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
+      .on("postgres_changes",{event:"*",schema:"public",table:"couple_member_preferences",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .subscribe();
   }
   init();
