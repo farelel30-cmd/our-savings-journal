@@ -124,17 +124,59 @@
       }catch(err){setMessage("authMessage",err.message||"Terjadi kesalahan.");}
       finally{btn.disabled=false;}
     });
+    $("forgotPasswordBtn").addEventListener("click",async()=>{
+      const email=$("emailInput").value.trim();
+      if(!email){setMessage("authMessage","Masukkan email akun terlebih dahulu, lalu klik Lupa password.");$("emailInput").focus();return;}
+      const btn=$("forgotPasswordBtn");btn.disabled=true;
+      setMessage("authMessage","Mengirim tautan pemulihan password...");
+      try{
+        const redirectTo=window.location.origin+window.location.pathname;
+        const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});
+        if(error)throw error;
+        setMessage("authMessage","Permintaan pemulihan dikirim. Periksa email masuk dan folder spam.",true);
+      }catch(err){
+        setMessage("authMessage",`Gagal mengirim tautan: ${err.message}. Jika tertulis redirect URL tidak diizinkan, URL website perlu ditambahkan di Supabase Auth → URL Configuration.`);
+      }finally{btn.disabled=false;}
+    });
     document.querySelectorAll(".auth-tab").forEach(b=>b.addEventListener("click",()=>{
       mode=b.dataset.mode;document.querySelectorAll(".auth-tab").forEach(x=>x.classList.toggle("active",x===b));
       $("authSubmit").innerHTML=mode==="login"?'Masuk ke jurnal <span>♡</span>':'Buat akun <span>♡</span>';
+      $("forgotPasswordBtn").classList.toggle("hidden",mode!=="login");
       $("passwordInput").autocomplete=mode==="login"?"current-password":"new-password";setMessage("authMessage","");
     }));
     $("logoutBtn").addEventListener("click",async()=>{await supabase.auth.signOut();currentUser=null;entries=[];showAuth();setConnection("Keluar");});
     $("depositMeBtn").addEventListener("click",deposit);$("saveSettingsBtn").addEventListener("click",saveSettings);
     $("saveNoteBtn").addEventListener("click",saveNote);$("historyFilter").addEventListener("change",renderHistory);
+    supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==="PASSWORD_RECOVERY"&&session?.user){
+        setTimeout(async()=>{
+          const newPassword=window.prompt("Buat password baru minimal 6 karakter:");
+          if(newPassword===null){
+            await supabase.auth.signOut();currentUser=null;showAuth();
+            setMessage("authMessage","Pemulihan dibatalkan. Klik Lupa password? jika ingin mencoba lagi.");
+            return;
+          }
+          if(newPassword.length<6){
+            await supabase.auth.signOut();currentUser=null;showAuth();
+            setMessage("authMessage","Password baru minimal 6 karakter. Klik Lupa password? untuk mencoba lagi.");
+            return;
+          }
+          const {error}=await supabase.auth.updateUser({password:newPassword});
+          if(error){
+            await supabase.auth.signOut();currentUser=null;showAuth();
+            setMessage("authMessage",`Gagal memperbarui password: ${error.message}`);
+            return;
+          }
+          await supabase.auth.signOut();currentUser=null;entries=[];showAuth();
+          window.history.replaceState(null,document.title,window.location.pathname);
+          setMessage("authMessage","Password berhasil diganti. Silakan masuk dengan password baru.",true);
+        },0);
+        return;
+      }
+      if(event==="SIGNED_IN"&&session?.user&&!currentUser)enterApp(session.user);
+    });
     const {data:{session}}=await supabase.auth.getSession();
     if(session?.user) await enterApp(session.user); else showAuth();
-    supabase.auth.onAuthStateChange((_event,session)=>{if(session?.user&&!currentUser)enterApp(session.user);});
     // Realtime refresh across both devices.
     supabase.channel("shared-savings")
       .on("postgres_changes",{event:"*",schema:"public",table:"savings_entries",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
