@@ -42,9 +42,18 @@
     $("weeksTogether").textContent=new Set(entries.map(e=>e.week_start)).size;
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
-    $("currentWeekBadge").textContent=`Minggu ${dateFmt(thisMonday,{day:"numeric",month:"short"})}`;
-    $("nextMondayDay").textContent=new Date(thisMonday+"T12:00:00").getDate();
-    $("weekDateText").textContent=`Pekan dimulai ${dateFmt(thisMonday)}.`;
+    const today = new Date();
+    const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/\\./g,"").toUpperCase();
+    $("currentDayLabel").textContent=todayShort;
+    $("currentWeekBadge").textContent=`Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
+    $("nextMondayDay").textContent=today.getDate();
+    const nextDepositMonday = new Date(thisMonday+"T12:00:00");
+    if(today.getDay()!==1) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
+    const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
+    $("weekDateText").textContent = today.getDay()===1
+      ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
+      : `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`;
     $("myDisplayName").value=settings?.my_name||"";$("partnerDisplayName").value=settings?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
