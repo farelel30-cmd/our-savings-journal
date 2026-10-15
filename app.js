@@ -12,9 +12,28 @@
     const day = d.getDay(); d.setDate(d.getDate() - ((day + 6) % 7));
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   };
-  const thisMonday = mondayFor();
+  let thisMonday = mondayFor();
+  let lastCalendarDate = "";
   const setMessage = (id, msg, good=false) => { const el=$(id); if(el){el.textContent=msg;el.style.color=good?"#4e9b77":"#c84e7d";} };
   const setConnection = (label, state="") => { $("connectionStatus").innerHTML = `<i></i> ${esc(label)}`; $("connectionStatus").className = `status-pill ${state}`; };
+  const updateWeeklyCalendar = () => {
+    const today = new Date();
+    const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    const dateChanged = lastCalendarDate !== "" && lastCalendarDate !== todayISO;
+    thisMonday = mondayFor(today);
+    const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
+    $("currentDayLabel").textContent = todayShort;
+    $("currentWeekBadge").textContent = `Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
+    $("nextMondayDay").textContent = today.getDate();
+    const nextDepositMonday = new Date(thisMonday+"T12:00:00");
+    if (today.getDay() !== 1) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
+    const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
+    $("weekDateText").textContent = today.getDay() === 1
+      ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
+      : `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`;
+    lastCalendarDate = todayISO;
+    return dateChanged;
+  };
   const showAuth = () => {$("authSection").classList.remove("hidden");$("appSection").classList.add("hidden");$("logoutBtn").classList.add("hidden");};
   const showApp = () => {$("authSection").classList.add("hidden");$("appSection").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");};
   const ownEntry = (week=thisMonday) => entries.find(e=>e.week_start===week && e.user_id===currentUser.id);
@@ -42,18 +61,7 @@
     $("weeksTogether").textContent=new Set(entries.map(e=>e.week_start)).size;
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
-    const today = new Date();
-    const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-    const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
-    $("currentDayLabel").textContent=todayShort;
-    $("currentWeekBadge").textContent=`Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
-    $("nextMondayDay").textContent=today.getDate();
-    const nextDepositMonday = new Date(thisMonday+"T12:00:00");
-    if(today.getDay()!==1) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
-    const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
-    $("weekDateText").textContent = today.getDay()===1
-      ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
-      : `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`;
+    updateWeeklyCalendar();
     $("myDisplayName").value=settings?.my_name||"";$("partnerDisplayName").value=settings?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
@@ -122,6 +130,11 @@
     if(!configured){$("setupNotice").classList.remove("hidden");setConnection("Belum dikonfigurasi","offline");return;}
     if(!window.supabase){setConnection("Library gagal dimuat","offline");return;}
     supabase=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+    updateWeeklyCalendar();
+    window.setInterval(()=>{
+      const dateChanged = updateWeeklyCalendar();
+      if(dateChanged && currentUser) loadData().catch(()=>{});
+    },60*1000);
     $("authForm").addEventListener("submit",async e=>{
       e.preventDefault();const email=$("emailInput").value.trim(),password=$("passwordInput").value;
       const btn=$("authSubmit");btn.disabled=true;setMessage("authMessage",mode==="login"?"Sedang masuk...":"Sedang membuat akun...");
