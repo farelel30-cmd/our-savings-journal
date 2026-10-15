@@ -39,14 +39,9 @@
   const ownEntry = (week=thisMonday) => entries.find(e=>e.week_start===week && e.user_id===currentUser.id);
   const partnerEntries = () => entries.filter(e=>e.user_id!==currentUser.id);
   const ownPreference = () => preferences.find(p => p.user_id === currentUser?.id) || null;
-  const partnerPreference = () => preferences.find(p => p.user_id !== currentUser?.id) || null;
   const displayMyName = () => ownPreference()?.my_name?.trim() || currentUser?.email?.split("@")[0] || "Kamu";
-  const displayPartnerName = () => partnerPreference()?.my_name?.trim() || "Pasangan";
-  const nameFor = (uid) => {
-    const preference = preferences.find(p => p.user_id === uid);
-    if(uid === currentUser?.id) return preference?.my_name?.trim() || currentUser?.email?.split("@")[0] || "Kamu";
-    return preference?.my_name?.trim() || "Pasangan";
-  };
+  const displayPartnerName = () => ownPreference()?.partner_name?.trim() || "Pasangan";
+  const nameFor = (uid) => uid === currentUser?.id ? displayMyName() : displayPartnerName();
   const render = () => {
     const my = entries.filter(e=>e.user_id===currentUser.id);
     const partner = partnerEntries();
@@ -67,7 +62,7 @@
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
     updateWeeklyCalendar();
-    $("myDisplayName").value=ownPreference()?.my_name||"";$("partnerDisplayName").value=displayPartnerName();$("photoUrlInput").value=settings?.photo_url||"";
+    $("myDisplayName").value=ownPreference()?.my_name||"";$("partnerDisplayName").value=ownPreference()?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
     const defaultCouplePhoto="Screenshot%202026-10-14%20000037.png";
@@ -119,7 +114,7 @@
     const photoUrl=$("photoUrlInput").value.trim()||null;
     if(photoUrl){try{const u=new URL(photoUrl);if(!["https:","http:"].includes(u.protocol))throw new Error();}catch{setMessage("settingsMessage","URL foto harus berupa tautan http/https yang valid.");return;}}
     const {error:preferenceError}=await supabase.from("couple_member_preferences").upsert({
-      couple_id:cfg.COUPLE_ID,user_id:currentUser.id,my_name:myName,partner_name:displayPartnerName(),updated_at:new Date().toISOString()
+      couple_id:cfg.COUPLE_ID,user_id:currentUser.id,my_name:myName,partner_name:$("partnerDisplayName").value.trim(),updated_at:new Date().toISOString()
     },{onConflict:"couple_id,user_id"});
     if(preferenceError){setMessage("settingsMessage",`Gagal menyimpan nama. ${preferenceError.message}`);return;}
     const {error:photoError}=await supabase.from("couple_settings").upsert({
