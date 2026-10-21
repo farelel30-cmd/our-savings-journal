@@ -100,6 +100,16 @@
         </article>
       </section>
 
+
+      <section class="qris-entry-panel" aria-labelledby="qrisHeading">
+        <div class="qris-entry-copy">
+          <div class="eyebrow">EASY WEEKLY DEPOSIT</div>
+          <h2 id="qrisHeading">Setor lewat QRIS <span>♡</span></h2>
+          <p>Bayar setoran mingguan Rp25.000 lewat aplikasi pembayaran pilihanmu.</p>
+        </div>
+        <button id="openQrisBtn" class="btn btn-primary" type="button">Bayar dengan QRIS <span>♡</span></button>
+      </section>
+
       <section class="content-grid">
         <article class="panel journal-panel">
           <div class="panel-heading">
@@ -168,6 +178,33 @@
           <p id="settingsMessage" class="form-message"></p>
         </article>
       </section>
+
+      <div id="qrisModal" class="qris-modal hidden" role="dialog" aria-modal="true" aria-labelledby="qrisModalTitle">
+        <div class="qris-modal-backdrop" data-close-qris="true"></div>
+        <div class="qris-modal-card">
+          <div class="qris-modal-heading">
+            <div>
+              <div class="eyebrow">OUR LITTLE SAVINGS</div>
+              <h2 id="qrisModalTitle">Pembayaran QRIS <span>♡</span></h2>
+            </div>
+            <button id="closeQrisBtn" class="qris-close-btn" type="button" aria-label="Tutup pembayaran">×</button>
+          </div>
+          <p class="qris-modal-intro">Scan kode QRIS di bawah melalui aplikasi pembayaran yang mendukung QRIS.</p>
+          <div class="qris-image-frame">
+            <img src="qris.jpeg" alt="Kode QRIS untuk setoran tabungan" id="qrisImage">
+          </div>
+          <div class="qris-amount-box">
+            <span>Nominal setoran</span>
+            <strong>Rp25.000</strong>
+            <small>Pastikan nominal yang kamu masukkan di aplikasi pembayaran adalah Rp25.000.</small>
+          </div>
+          <p class="qris-warning">Setelah melakukan pembayaran, tekan tombol konfirmasi. Konfirmasi ini bersifat mandiri dan tidak memeriksa transaksi secara otomatis.</p>
+          <p id="qrisMessage" class="form-message" role="status" aria-live="polite"></p>
+          <button id="confirmQrisPaymentBtn" class="btn btn-primary full" type="button">Saya Sudah Membayar ♡</button>
+          <button id="cancelQrisBtn" class="btn btn-quiet full" type="button">Kembali ke dashboard</button>
+        </div>
+      </div>
+
       <footer class="footer">dibuat dengan banyak ♡ untuk perjalanan kalian · <span id="syncText">Sinkronisasi online</span></footer>
     </section>
   </main>
