@@ -109,6 +109,48 @@
     setMessage("journalMessage","Setoran berhasil dicatat. Semangat menabung bareng! ♡",true);
     await loadData();
   }
+
+  function openQrisModal(){
+    const modal = $("qrisModal");
+    if(!modal) return;
+    setMessage("qrisMessage", "");
+    const confirmBtn = $("confirmQrisPaymentBtn");
+    confirmBtn.disabled = !!ownEntry();
+    confirmBtn.textContent = ownEntry() ? "Setoran minggu ini sudah tercatat ✓" : "Saya Sudah Membayar ♡";
+    modal.classList.remove("hidden");
+    document.body.classList.add("qris-modal-open");
+    $("closeQrisBtn").focus();
+  }
+  function closeQrisModal(){
+    $("qrisModal")?.classList.add("hidden");
+    document.body.classList.remove("qris-modal-open");
+    $("openQrisBtn")?.focus();
+  }
+  async function confirmQrisPayment(){
+    if(ownEntry()){
+      setMessage("qrisMessage", "Setoranmu untuk minggu ini sudah tercatat; tidak ada tambahan saldo.", true);
+      $("confirmQrisPaymentBtn").disabled = true;
+      return;
+    }
+    const btn = $("confirmQrisPaymentBtn");
+    btn.disabled = true;
+    btn.textContent = "Menyimpan konfirmasi...";
+    try {
+      await deposit();
+      if(ownEntry()){
+        setMessage("qrisMessage", "Konfirmasi tersimpan. Saldo bertambah Rp25.000. ♡", true);
+        btn.textContent = "Setoran tercatat ✓";
+        window.setTimeout(closeQrisModal, 1200);
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Saya Sudah Membayar ♡";
+      }
+    } catch(err) {
+      setMessage("qrisMessage", "Konfirmasi gagal disimpan: " + (err.message || "coba lagi."));
+      btn.disabled = false;
+      btn.textContent = "Saya Sudah Membayar ♡";
+    }
+  }
   async function saveSettings(){
     const myName=$("myDisplayName").value.trim();
     const photoUrl=$("photoUrlInput").value.trim()||null;
@@ -175,7 +217,14 @@
       $("passwordInput").autocomplete=mode==="login"?"current-password":"new-password";setMessage("authMessage","");
     }));
     $("logoutBtn").addEventListener("click",async()=>{await supabase.auth.signOut();currentUser=null;entries=[];showAuth();setConnection("Keluar");});
-    $("depositMeBtn").addEventListener("click",deposit);$("saveSettingsBtn").addEventListener("click",saveSettings);
+    $("depositMeBtn").addEventListener("click",deposit);
+    $("openQrisBtn").addEventListener("click",openQrisModal);
+    $("closeQrisBtn").addEventListener("click",closeQrisModal);
+    $("cancelQrisBtn").addEventListener("click",closeQrisModal);
+    $("confirmQrisPaymentBtn").addEventListener("click",confirmQrisPayment);
+    $("qrisModal").addEventListener("click",e=>{if(e.target.matches("[data-close-qris='true']"))closeQrisModal();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("qrisModal").classList.contains("hidden"))closeQrisModal();});
+    $("saveSettingsBtn").addEventListener("click",saveSettings);
     $("saveNoteBtn").addEventListener("click",saveNote);$("historyFilter").addEventListener("change",renderHistory);
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==="PASSWORD_RECOVERY"&&session?.user){
