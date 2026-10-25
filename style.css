@@ -62,3 +62,21 @@ main{max-width:1124px;margin:0 auto;padding:16px 24px 44px}.auth-layout{display:
 .qris-modal-card .form-message{margin-top:10px}
 @keyframes qrisPopIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:600px){.qris-entry-panel{align-items:stretch;flex-direction:column;padding:20px}.qris-entry-panel .btn{width:100%}.qris-modal{padding:12px}.qris-modal-card{padding:20px;max-height:calc(100vh - 24px);border-radius:20px}.qris-modal-heading h2{font-size:22px}}
+
+/* Shared skip schedule and withdrawal controls */
+.savings-actions-panel{margin:0 0 17px;padding:25px}
+.savings-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.savings-action-card{padding:20px;border:1px solid #f2e0e8;border-radius:17px;background:linear-gradient(140deg,#fff 0%,#fff8fb 100%)}
+.savings-action-card .action-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:#fff0f6;color:#ce6b93;font-size:23px;margin-bottom:12px}
+.savings-action-card h3{font-family:"Playfair Display",serif;font-size:19px;color:#503847;margin:0 0 8px}
+.savings-action-card p{font-size:11px;line-height:1.7;color:var(--muted);margin:0 0 14px}
+.savings-action-card .full{width:100%;margin-top:8px}
+.savings-action-card .tiny-note{display:block;line-height:1.6;margin-top:10px}
+.available-balance{display:flex;align-items:center;justify-content:space-between;padding:12px 13px;background:#fff0f6;border:1px solid #f5dce6;border-radius:12px;margin-bottom:13px}
+.available-balance span{font-size:10px;color:#a77f93}
+.available-balance b{font-family:"Playfair Display",serif;font-size:20px;color:#c84e7d}
+.withdraw-card label{margin-top:7px}
+.withdraw-card input{padding:11px 12px}
+.withdrawal-value{color:#c84e7d}
+#skipWeekBtn:disabled{opacity:.72;cursor:not-allowed}
+@media(max-width:600px){.savings-actions-panel{padding:19px}.savings-action-grid{grid-template-columns:1fr}.savings-action-card{padding:17px}}
