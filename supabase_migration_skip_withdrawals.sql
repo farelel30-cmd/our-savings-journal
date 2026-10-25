@@ -37,8 +37,49 @@ drop policy if exists "members can read shared withdrawals" on public.savings_wi
 create policy "members can read shared withdrawals" on public.savings_withdrawals
 for select to authenticated using (public.is_couple_member(couple_id));
 
-grant select, insert on public.skipped_weeks to authenticated;
-grant select on public.savings_withdrawals to authenticated;
+drop policy if exists "members can skip a week" on public.skipped_weeks;
+grant select on public.skipped_weeks, public.savings_withdrawals to authenticated;
+
+-- Skip the weekly deposit atomically and only if nobody has already deposited.
+create or replace function public.skip_shared_week(p_couple_id uuid, p_week_start date)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+  v_skip_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Silakan masuk terlebih dahulu.';
+  end if;
+  if not public.is_couple_member(p_couple_id) then
+    raise exception 'Akun ini bukan anggota pasangan tersebut.';
+  end if;
+  if p_week_start is null or extract(isodow from p_week_start) <> 1 then
+    raise exception 'Tanggal jadwal harus hari Senin.';
+  end if;
+
+  perform 1 from public.couples where id = p_couple_id for update;
+  if not found then
+    raise exception 'Data pasangan tidak ditemukan.';
+  end if;
+  if exists (
+    select 1 from public.savings_entries
+    where couple_id = p_couple_id and week_start = p_week_start
+  ) then
+    raise exception 'Jadwal tidak bisa dilewati karena sudah ada setoran yang tercatat.';
+  end if;
+
+  insert into public.skipped_weeks (couple_id, week_start, user_id)
+  values (p_couple_id, p_week_start, auth.uid())
+  returning id into v_skip_id;
+  return v_skip_id;
+end;
+$;
+
+revoke all on function public.skip_shared_week(uuid, date) from public;
+grant execute on function public.skip_shared_week(uuid, date) to authenticated;
 
 -- Atomically validate and record a withdrawal. Locking the couple row serializes
 -- simultaneous withdrawal attempts so they cannot spend the same balance twice.
