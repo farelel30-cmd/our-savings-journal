@@ -138,9 +138,9 @@
     const weekLabel=dateFmt(thisMonday,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
     if(!window.confirm(`Lewati jadwal nabung ${weekLabel}? Ini berlaku untuk kamu dan pasangan. Saldo tidak berubah.`)) return;
     $("skipWeekBtn").disabled=true;
-    const {error}=await supabase.from("skipped_weeks").insert({couple_id:cfg.COUPLE_ID,week_start:thisMonday,user_id:currentUser.id});
+    const {error}=await supabase.rpc("skip_shared_week",{p_couple_id:cfg.COUPLE_ID,p_week_start:thisMonday});
     if(error){
-      setMessage("journalMessage",error.code==="23505"?"Jadwal minggu ini sudah dilewati oleh salah satu dari kalian.":"Gagal menyimpan skip: "+error.message);
+      setMessage("journalMessage",error.code==="23505"?"Jadwal minggu ini sudah dilewati oleh salah satu dari kalian.":error.message||"Gagal menyimpan skip.");
       $("skipWeekBtn").disabled=false;return;
     }
     setMessage("journalMessage","Jadwal minggu ini dilewati untuk kalian berdua. Jadwal berikutnya minggu depan. ♡",true);
