@@ -57,6 +57,7 @@
   const displayPartnerName = () => ownPreference()?.partner_name?.trim() || "Pasangan";
   const nameFor = (uid) => uid === currentUser?.id ? displayMyName() : displayPartnerName();
   const render = () => {
+    updateWeeklyCalendar();
     const my = entries.filter(e=>e.user_id===currentUser.id);
     const partner = partnerEntries();
     const myWithdrawals = withdrawals.filter(w=>w.user_id===currentUser.id);
@@ -86,7 +87,6 @@
     $("weeksTogether").textContent=new Set(entries.map(e=>e.week_start)).size;
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
-    updateWeeklyCalendar();
     $("myDisplayName").value=ownPreference()?.my_name||"";$("partnerDisplayName").value=ownPreference()?.partner_name||"";$("photoUrlInput").value=settings?.photo_url||"";
     $("coupleNote").value=noteText;
     const photo=$("couplePhoto");
@@ -102,16 +102,20 @@
     const filter=$("historyFilter").value;
     let list=[
       ...entries.map(e=>({...e,recordType:"deposit",sortDate:e.created_at})),
-      ...withdrawals.map(w=>({...w,recordType:"withdrawal",sortDate:w.created_at}))
+      ...withdrawals.map(w=>({...w,recordType:"withdrawal",sortDate:w.created_at})),
+      ...skippedWeeks.map(s=>({...s,recordType:"skip",sortDate:s.created_at}))
     ].sort((a,b)=>b.sortDate.localeCompare(a.sortDate));
     if(filter==="mine")list=list.filter(e=>e.user_id===currentUser.id);
     if(filter==="partner")list=list.filter(e=>e.user_id!==currentUser.id);
     if(!list.length){$("historyList").innerHTML='<div class="empty-state">Belum ada catatan untuk filter ini. Setoran pertama kalian akan muncul di sini. ♡</div>';return;}
     $("historyList").innerHTML=list.map(e=>{
-      const isWithdrawal=e.recordType==="withdrawal";
+      const isWithdrawal=e.recordType==="withdrawal", isSkip=e.recordType==="skip";
       const dateSource=isWithdrawal?e.created_at.slice(0,10):e.week_start;
       const d=new Date(dateSource+"T12:00:00");
-      return `<div class="history-item"><div class="history-date"><b>${d.getDate()}</b><span>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d).toUpperCase()}</span></div><div class="history-details"><b>${esc(nameFor(e.user_id))} ${isWithdrawal?"mengambil tabungan":"menabung ♡"}</b><small>${isWithdrawal?"Penarikan":"Pekan mulai "+dateFmt(e.week_start)} · dicatat ${dateFmt(e.created_at.slice(0,10))}</small></div><div class="history-value ${isWithdrawal?"withdrawal-value":""}">${isWithdrawal?"−":"+"}${money(e.amount)}<small>${e.user_id===currentUser.id?(isWithdrawal?"Penarikan kamu":"Setoran kamu"):(isWithdrawal?"Penarikan pasangan":"Setoran pasangan")}</small></div></div>`;
+      const activity=isSkip?"melewati jadwal nabung":isWithdrawal?"mengambil tabungan":"menabung ♡";
+      const value=isSkip?"—":(isWithdrawal?"−":"+")+money(e.amount);
+      const detail=isSkip?"Jadwal libur untuk berdua":isWithdrawal?"Penarikan":"Pekan mulai "+dateFmt(e.week_start);
+      return `<div class="history-item"><div class="history-date"><b>${d.getDate()}</b><span>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d).toUpperCase()}</span></div><div class="history-details"><b>${esc(nameFor(e.user_id))} ${activity}</b><small>${detail} · dicatat ${dateFmt(e.created_at.slice(0,10))}</small></div><div class="history-value ${isWithdrawal?"withdrawal-value":""}">${value}<small>${isSkip?"Skip bersama":e.user_id===currentUser.id?(isWithdrawal?"Penarikan kamu":"Setoran kamu"):(isWithdrawal?"Penarikan pasangan":"Setoran pasangan")}</small></div></div>`;
     }).join("");
   };
   async function loadData(){
