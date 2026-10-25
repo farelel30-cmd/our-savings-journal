@@ -46,7 +46,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = public
-as $
+as $skip$
 declare
   v_skip_id uuid;
 begin
@@ -76,7 +76,7 @@ begin
   returning id into v_skip_id;
   return v_skip_id;
 end;
-$;
+$skip$;
 
 revoke all on function public.skip_shared_week(uuid, date) from public;
 grant execute on function public.skip_shared_week(uuid, date) to authenticated;
