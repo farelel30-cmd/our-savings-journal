@@ -110,6 +110,30 @@
         <button id="openQrisBtn" class="btn btn-primary" type="button">Bayar dengan QRIS <span>♡</span></button>
       </section>
 
+      <section class="panel savings-actions-panel">
+        <div class="panel-heading"><div><div class="eyebrow">OUR PLAN, TOGETHER</div><h2>Jadwal & saldo <span>♡</span></h2></div><span class="goal-sparkle">✧</span></div>
+        <div class="savings-action-grid">
+          <article class="savings-action-card skip-card">
+            <div class="action-icon">☁</div><h3>Skip nabung minggu ini</h3>
+            <p>Kalau kalian sepakat libur, satu orang cukup menekan tombol ini. Jadwal libur berlaku untuk kalian berdua dan saldo tetap aman.</p>
+            <button id="skipWeekBtn" class="btn btn-outline full" type="button">Skip Nabung Minggu Ini</button>
+            <small id="skipWeekStatus" class="tiny-note">Status jadwal akan tampil di sini.</small>
+          </article>
+          <article class="savings-action-card withdraw-card">
+            <div class="action-icon">♡</div><h3>Ambil tabungan</h3>
+            <p>Masukkan nominal yang ingin diambil. Setelah dikonfirmasi dan tersimpan, saldo bersama akan berkurang.</p>
+            <div class="available-balance"><span>Saldo tersedia</span><b id="availableBalance">Rp0</b></div>
+            <form id="withdrawForm">
+              <label for="withdrawAmount">Nominal penarikan (Rp)</label>
+              <input id="withdrawAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 25000" required>
+              <small id="withdrawBalanceHint" class="tiny-note">Saldo tersedia: Rp0</small>
+              <button id="withdrawSubmitBtn" class="btn btn-primary full" type="submit">Konfirmasi Ambil Tabungan</button>
+              <p id="withdrawMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </article>
+        </div>
+      </section>
+
       <section class="content-grid">
         <article class="panel journal-panel">
           <div class="panel-heading">
