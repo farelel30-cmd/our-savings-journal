@@ -60,10 +60,8 @@
     updateWeeklyCalendar();
     const my = entries.filter(e=>e.user_id===currentUser.id);
     const partner = partnerEntries();
-    const myWithdrawals = withdrawals.filter(w=>w.user_id===currentUser.id);
-    const partnerWithdrawals = withdrawals.filter(w=>w.user_id!==currentUser.id);
-    const mySum = my.reduce((s,e)=>s+Number(e.amount),0)-myWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
-    const partnerSum = partner.reduce((s,e)=>s+Number(e.amount),0)-partnerWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
+    const mySum = my.reduce((s,e)=>s+Number(e.amount),0);
+    const partnerSum = partner.reduce((s,e)=>s+Number(e.amount),0);
     const total = availableBalance(), target=Number(cfg.TARGET_AMOUNT||1000000), pct=Math.min(100,Math.round(Math.max(0,total)/target*100));
     $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);
     $("availableBalance").textContent=money(total);
