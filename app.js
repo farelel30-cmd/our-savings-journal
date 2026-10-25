@@ -25,17 +25,21 @@
     const today = new Date();
     const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
     const dateChanged = lastCalendarDate !== "" && lastCalendarDate !== todayISO;
-    thisMonday = scheduledMonday(today);
+    const baseMonday = scheduledMonday(today);
+    const wasSkipped = skippedWeeks.find(s=>s.week_start===baseMonday);
+    thisMonday = wasSkipped ? nextMondayISO(baseMonday) : baseMonday;
     const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
     $("currentDayLabel").textContent = todayShort;
     $("currentWeekBadge").textContent = `Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
     $("nextMondayDay").textContent = today.getDate();
     const nextDepositMonday = new Date(thisMonday+"T12:00:00");
-    if (today.getDay() !== 1 && today.getDay() !== 0) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
+    if (!wasSkipped && today.getDay() !== 1 && today.getDay() !== 0) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
     const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
-    $("weekDateText").textContent = today.getDay() === 1
-      ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
-      : `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`;
+    $("weekDateText").textContent = wasSkipped
+      ? `Jadwal sebelumnya dilewati · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`
+      : today.getDay() === 1
+        ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
+        : `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`;
     lastCalendarDate = todayISO;
     return dateChanged;
   };
@@ -60,7 +64,8 @@
     const mySum = my.reduce((s,e)=>s+Number(e.amount),0)-myWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
     const partnerSum = partner.reduce((s,e)=>s+Number(e.amount),0)-partnerWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
     const total = availableBalance(), target=Number(cfg.TARGET_AMOUNT||1000000), pct=Math.min(100,Math.round(Math.max(0,total)/target*100));
-    $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);\n    $("availableBalance").textContent=money(total);
+    $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);
+    $("availableBalance").textContent=money(total);
     $("progressLabel").textContent=`${pct}% dari target`;$("remainingAmount").textContent=total>=target?"Target tercapai! ♡":`Sisa ${money(target-total)}`;
     $("progressBar").style.width=`${pct}%`;$("goalProgressBar").style.width=`${pct}%`;
     $("myName").textContent=displayMyName();$("partnerName").textContent=displayPartnerName();
@@ -277,7 +282,9 @@
       $("passwordInput").autocomplete=mode==="login"?"current-password":"new-password";setMessage("authMessage","");
     }));
     $("logoutBtn").addEventListener("click",async()=>{await supabase.auth.signOut();currentUser=null;entries=[];showAuth();setConnection("Keluar");});
-    $("depositMeBtn").addEventListener("click",deposit);\n    $("skipWeekBtn").addEventListener("click",skipCurrentWeek);\n    $("withdrawForm").addEventListener("submit",withdrawSavings);
+    $("depositMeBtn").addEventListener("click",deposit);
+    $("skipWeekBtn").addEventListener("click",skipCurrentWeek);
+    $("withdrawForm").addEventListener("submit",withdrawSavings);
     $("openQrisBtn").addEventListener("click",openQrisModal);
     $("closeQrisBtn").addEventListener("click",closeQrisModal);
     $("cancelQrisBtn").addEventListener("click",closeQrisModal);
