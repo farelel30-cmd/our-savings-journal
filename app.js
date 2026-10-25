@@ -3,7 +3,7 @@
   const cfg = window.APP_CONFIG || {};
   const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes("YOUR_PROJECT_ID")
     && cfg.SUPABASE_ANON_KEY && !cfg.SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
-  let supabase = null, currentUser = null, mode = "login", entries = [], settings = null, preferences = [], noteText = "";
+  let supabase = null, currentUser = null, mode = "login", entries = [], withdrawals = [], skippedWeeks = [], settings = null, preferences = [], noteText = "";
   const money = (n) => new Intl.NumberFormat("id-ID", {style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n||0));
   const dateFmt = (s, options={day:"numeric",month:"short",year:"numeric"}) => new Intl.DateTimeFormat("id-ID", options).format(new Date(s+"T12:00:00"));
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -12,7 +12,12 @@
     const day = d.getDay(); d.setDate(d.getDate() - ((day + 6) % 7));
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   };
-  let thisMonday = mondayFor();
+  const scheduledMonday = (date = new Date()) => {
+    const d = new Date(date); d.setHours(12,0,0,0);
+    if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+    return mondayFor(d);
+  };
+  let thisMonday = scheduledMonday();
   let lastCalendarDate = "";
   const setMessage = (id, msg, good=false) => { const el=$(id); if(el){el.textContent=msg;el.style.color=good?"#4e9b77":"#c84e7d";} };
   const setConnection = (label, state="") => { $("connectionStatus").innerHTML = `<i></i> ${esc(label)}`; $("connectionStatus").className = `status-pill ${state}`; };
@@ -20,13 +25,13 @@
     const today = new Date();
     const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
     const dateChanged = lastCalendarDate !== "" && lastCalendarDate !== todayISO;
-    thisMonday = mondayFor(today);
+    thisMonday = scheduledMonday(today);
     const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
     $("currentDayLabel").textContent = todayShort;
     $("currentWeekBadge").textContent = `Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
     $("nextMondayDay").textContent = today.getDate();
     const nextDepositMonday = new Date(thisMonday+"T12:00:00");
-    if (today.getDay() !== 1) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
+    if (today.getDay() !== 1 && today.getDay() !== 0) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
     const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
     $("weekDateText").textContent = today.getDay() === 1
       ? `Hari ini ${dateFmt(todayISO,{weekday:"long",day:"numeric",month:"short"})} · jadwal setoran mingguan.`
@@ -37,6 +42,11 @@
   const showAuth = () => {$("authSection").classList.remove("hidden");$("appSection").classList.add("hidden");$("logoutBtn").classList.add("hidden");};
   const showApp = () => {$("authSection").classList.add("hidden");$("appSection").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");};
   const ownEntry = (week=thisMonday) => entries.find(e=>e.week_start===week && e.user_id===currentUser.id);
+  const skippedWeek = (week=thisMonday) => skippedWeeks.find(s=>s.week_start===week);
+  const totalDeposited = () => entries.reduce((sum,e)=>sum+Number(e.amount||0),0);
+  const totalWithdrawn = () => withdrawals.reduce((sum,w)=>sum+Number(w.amount||0),0);
+  const availableBalance = () => totalDeposited()-totalWithdrawn();
+  const nextMondayISO = (week) => { const d=new Date(week+"T12:00:00"); d.setDate(d.getDate()+7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
   const partnerEntries = () => entries.filter(e=>e.user_id!==currentUser.id);
   const ownPreference = () => preferences.find(p => p.user_id === currentUser?.id) || null;
   const displayMyName = () => ownPreference()?.my_name?.trim() || currentUser?.email?.split("@")[0] || "Kamu";
@@ -45,19 +55,29 @@
   const render = () => {
     const my = entries.filter(e=>e.user_id===currentUser.id);
     const partner = partnerEntries();
-    const mySum = my.reduce((s,e)=>s+Number(e.amount),0), partnerSum = partner.reduce((s,e)=>s+Number(e.amount),0);
-    const total = mySum+partnerSum, target=Number(cfg.TARGET_AMOUNT||1000000), pct=Math.min(100,Math.round(total/target*100));
-    $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);
+    const myWithdrawals = withdrawals.filter(w=>w.user_id===currentUser.id);
+    const partnerWithdrawals = withdrawals.filter(w=>w.user_id!==currentUser.id);
+    const mySum = my.reduce((s,e)=>s+Number(e.amount),0)-myWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
+    const partnerSum = partner.reduce((s,e)=>s+Number(e.amount),0)-partnerWithdrawals.reduce((s,w)=>s+Number(w.amount),0);
+    const total = availableBalance(), target=Number(cfg.TARGET_AMOUNT||1000000), pct=Math.min(100,Math.round(Math.max(0,total)/target*100));
+    $("totalAmount").textContent=money(total);$("myTotal").textContent=money(mySum);$("partnerTotal").textContent=money(partnerSum);\n    $("availableBalance").textContent=money(total);
     $("progressLabel").textContent=`${pct}% dari target`;$("remainingAmount").textContent=total>=target?"Target tercapai! ♡":`Sisa ${money(target-total)}`;
     $("progressBar").style.width=`${pct}%`;$("goalProgressBar").style.width=`${pct}%`;
     $("myName").textContent=displayMyName();$("partnerName").textContent=displayPartnerName();
     $("myWeeks").textContent=`${my.length} setoran`; $("partnerWeeks").textContent=`${partner.length} setoran`;
     $("depositMyName").textContent=displayMyName();$("depositPartnerName").textContent=displayPartnerName();
     const me=ownEntry(); const partnerEntry=entries.find(e=>e.week_start===thisMonday&&e.user_id!==currentUser.id);
-    $("myDepositStatus").textContent=me?`Sudah dicatat · ${dateFmt(me.created_at.slice(0,10))}`:"Belum dicatat minggu ini";
-    $("partnerDepositStatus").textContent=partnerEntry?"Sudah dicatat minggu ini":"Menunggu pasangan";
-    $("depositMeBtn").disabled=!!me;$("depositMeBtn").textContent=me?"Tercatat ✓":"Catat";
-    $("partnerStatusPill").textContent=partnerEntry?"Selesai ✓":"Menunggu";$("partnerStatusPill").className=partnerEntry?"done-pill":"pending-pill";
+    const skipped=skippedWeek();
+    $("myDepositStatus").textContent=skipped?"Jadwal minggu ini dilewati":me?`Sudah dicatat · ${dateFmt(me.created_at.slice(0,10))}`:"Belum dicatat minggu ini";
+    $("partnerDepositStatus").textContent=skipped?"Jadwal minggu ini dilewati":partnerEntry?"Sudah dicatat minggu ini":"Menunggu pasangan";
+    $("depositMeBtn").disabled=!!me||!!skipped;$("depositMeBtn").textContent=skipped?"Libur minggu ini":me?"Tercatat ✓":"Catat";
+    $("partnerStatusPill").textContent=skipped?"Libur":partnerEntry?"Selesai ✓":"Menunggu";$("partnerStatusPill").className=skipped?"pending-pill":partnerEntry?"done-pill":"pending-pill";
+    $("skipWeekBtn").disabled=!!skipped;
+    $("skipWeekBtn").textContent=skipped?"Minggu ini dilewati ✓":"Skip Nabung Minggu Ini";
+    $("skipWeekStatus").textContent=skipped?`Dilewati oleh ${esc(nameFor(skipped.user_id))} · jadwal berikutnya Senin, ${dateFmt(nextMondayISO(thisMonday),{day:"numeric",month:"short",year:"numeric"})}`:"Jika disepakati, satu klik skip akan berlaku untuk kalian berdua.";
+    $("withdrawSubmitBtn").disabled=total<=0;
+    $("withdrawAmount").max=String(Math.max(0,total));
+    $("withdrawBalanceHint").textContent=`Saldo tersedia: ${money(total)}`;
     $("weeksTogether").textContent=new Set(entries.map(e=>e.week_start)).size;
     $("goalEta").textContent=Math.max(0,Math.ceil((target-total)/(2*Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000))));
     $("goalHint").textContent=total>=target?"Yeay! Kalian berhasil mencapai target bersama. ♡":"Kalian pasti bisa, satu Senin demi satu Senin. ♡";
@@ -75,29 +95,69 @@
   };
   const renderHistory = () => {
     const filter=$("historyFilter").value;
-    let list=[...entries].sort((a,b)=>b.week_start.localeCompare(a.week_start)||b.created_at.localeCompare(a.created_at));
+    let list=[
+      ...entries.map(e=>({...e,recordType:"deposit",sortDate:e.created_at})),
+      ...withdrawals.map(w=>({...w,recordType:"withdrawal",sortDate:w.created_at}))
+    ].sort((a,b)=>b.sortDate.localeCompare(a.sortDate));
     if(filter==="mine")list=list.filter(e=>e.user_id===currentUser.id);
     if(filter==="partner")list=list.filter(e=>e.user_id!==currentUser.id);
     if(!list.length){$("historyList").innerHTML='<div class="empty-state">Belum ada catatan untuk filter ini. Setoran pertama kalian akan muncul di sini. ♡</div>';return;}
     $("historyList").innerHTML=list.map(e=>{
-      const d=new Date(e.week_start+"T12:00:00");
-      return `<div class="history-item"><div class="history-date"><b>${d.getDate()}</b><span>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d).toUpperCase()}</span></div><div class="history-details"><b>${esc(nameFor(e.user_id))} menabung ♡</b><small>Pekan mulai ${dateFmt(e.week_start)} · dicatat ${dateFmt(e.created_at.slice(0,10))}</small></div><div class="history-value">+${money(e.amount)}<small>${e.user_id===currentUser.id?"Setoran kamu":"Setoran pasangan"}</small></div></div>`;
+      const isWithdrawal=e.recordType==="withdrawal";
+      const dateSource=isWithdrawal?e.created_at.slice(0,10):e.week_start;
+      const d=new Date(dateSource+"T12:00:00");
+      return `<div class="history-item"><div class="history-date"><b>${d.getDate()}</b><span>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d).toUpperCase()}</span></div><div class="history-details"><b>${esc(nameFor(e.user_id))} ${isWithdrawal?"mengambil tabungan":"menabung ♡"}</b><small>${isWithdrawal?"Penarikan":"Pekan mulai "+dateFmt(e.week_start)} · dicatat ${dateFmt(e.created_at.slice(0,10))}</small></div><div class="history-value ${isWithdrawal?"withdrawal-value":""}">${isWithdrawal?"−":"+"}${money(e.amount)}<small>${e.user_id===currentUser.id?(isWithdrawal?"Penarikan kamu":"Setoran kamu"):(isWithdrawal?"Penarikan pasangan":"Setoran pasangan")}</small></div></div>`;
     }).join("");
   };
   async function loadData(){
     setConnection("Menyinkronkan...");
-    const [entriesRes, settingsRes, noteRes, preferencesRes] = await Promise.all([
+    const [entriesRes, withdrawalsRes, skippedRes, settingsRes, noteRes, preferencesRes] = await Promise.all([
       supabase.from("savings_entries").select("*").eq("couple_id",cfg.COUPLE_ID).order("week_start",{ascending:false}),
+      supabase.from("savings_withdrawals").select("*").eq("couple_id",cfg.COUPLE_ID).order("created_at",{ascending:false}),
+      supabase.from("skipped_weeks").select("*").eq("couple_id",cfg.COUPLE_ID).order("week_start",{ascending:false}),
       supabase.from("couple_settings").select("*").eq("couple_id",cfg.COUPLE_ID).maybeSingle(),
       supabase.from("couple_notes").select("*").eq("couple_id",cfg.COUPLE_ID).maybeSingle(),
       supabase.from("couple_member_preferences").select("*").eq("couple_id",cfg.COUPLE_ID)
     ]);
-    const err=[entriesRes.error,settingsRes.error,noteRes.error,preferencesRes.error].find(Boolean);
+    const err=[entriesRes.error,withdrawalsRes.error,skippedRes.error,settingsRes.error,noteRes.error,preferencesRes.error].find(Boolean);
     if(err) throw err;
-    entries=entriesRes.data||[];settings=settingsRes.data||null;preferences=preferencesRes.data||[];noteText=noteRes.data?.note||"";
+    entries=entriesRes.data||[];withdrawals=withdrawalsRes.data||[];skippedWeeks=skippedRes.data||[];settings=settingsRes.data||null;preferences=preferencesRes.data||[];noteText=noteRes.data?.note||"";
     render();setConnection("Tersinkron online","online");$("syncText").textContent="Data tersinkron online";
   }
+  async function skipCurrentWeek(){
+    if(skippedWeek()){setMessage("journalMessage","Jadwal minggu ini sudah dilewati.");return;}
+    const weekLabel=dateFmt(thisMonday,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    if(!window.confirm(`Lewati jadwal nabung ${weekLabel}? Ini berlaku untuk kamu dan pasangan. Saldo tidak berubah.`)) return;
+    $("skipWeekBtn").disabled=true;
+    const {error}=await supabase.from("skipped_weeks").insert({couple_id:cfg.COUPLE_ID,week_start:thisMonday,user_id:currentUser.id});
+    if(error){
+      setMessage("journalMessage",error.code==="23505"?"Jadwal minggu ini sudah dilewati oleh salah satu dari kalian.":"Gagal menyimpan skip: "+error.message);
+      $("skipWeekBtn").disabled=false;return;
+    }
+    setMessage("journalMessage","Jadwal minggu ini dilewati untuk kalian berdua. Jadwal berikutnya minggu depan. ♡",true);
+    await loadData();
+  }
+  async function withdrawSavings(event){
+    event.preventDefault();
+    const input=$("withdrawAmount"), amount=Number(input.value);
+    if(!Number.isSafeInteger(amount)||amount<=0){setMessage("withdrawMessage","Masukkan nominal rupiah berupa bilangan bulat lebih dari Rp0.");return;}
+    const balance=availableBalance();
+    if(amount>balance){setMessage("withdrawMessage",`Saldo tidak cukup. Saldo tersedia ${money(balance)}.`);return;}
+    if(!window.confirm(`Konfirmasi pengambilan tabungan?\\n\\nNominal: ${money(amount)}\\nSaldo sekarang: ${money(balance)}\\nSaldo setelah pengambilan: ${money(balance-amount)}\\n\\nPenarikan ini akan terlihat oleh pasangan.`)) return;
+    const btn=$("withdrawSubmitBtn");btn.disabled=true;btn.textContent="Menyimpan...";
+    try{
+      const {error}=await supabase.rpc("withdraw_shared_savings",{p_couple_id:cfg.COUPLE_ID,p_amount:amount});
+      if(error) throw error;
+      input.value="";
+      setMessage("withdrawMessage",`Penarikan ${money(amount)} berhasil disimpan. Saldo sudah diperbarui. ♡`,true);
+      await loadData();
+    }catch(err){
+      setMessage("withdrawMessage",err.message||"Penarikan gagal disimpan.");
+      await loadData().catch(()=>{});
+    }finally{btn.disabled=availableBalance()<=0;btn.textContent="Konfirmasi Ambil Tabungan";}
+  }
   async function deposit(){
+    if(skippedWeek()){setMessage("journalMessage","Jadwal minggu ini dilewati, jadi tidak ada setoran untuk minggu ini.");return;}
     if(ownEntry()){setMessage("journalMessage","Setoranmu untuk minggu ini sudah tercatat.");return;}
     $("depositMeBtn").disabled=true;
     const {error}=await supabase.from("savings_entries").insert({couple_id:cfg.COUPLE_ID,user_id:currentUser.id,week_start:thisMonday,amount:Number(cfg.WEEKLY_AMOUNT_PER_PERSON||25000)});
@@ -217,7 +277,7 @@
       $("passwordInput").autocomplete=mode==="login"?"current-password":"new-password";setMessage("authMessage","");
     }));
     $("logoutBtn").addEventListener("click",async()=>{await supabase.auth.signOut();currentUser=null;entries=[];showAuth();setConnection("Keluar");});
-    $("depositMeBtn").addEventListener("click",deposit);
+    $("depositMeBtn").addEventListener("click",deposit);\n    $("skipWeekBtn").addEventListener("click",skipCurrentWeek);\n    $("withdrawForm").addEventListener("submit",withdrawSavings);
     $("openQrisBtn").addEventListener("click",openQrisModal);
     $("closeQrisBtn").addEventListener("click",closeQrisModal);
     $("cancelQrisBtn").addEventListener("click",closeQrisModal);
@@ -259,6 +319,8 @@
     // Realtime refresh across both devices.
     supabase.channel("shared-savings")
       .on("postgres_changes",{event:"*",schema:"public",table:"savings_entries",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
+      .on("postgres_changes",{event:"*",schema:"public",table:"savings_withdrawals",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
+      .on("postgres_changes",{event:"*",schema:"public",table:"skipped_weeks",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .on("postgres_changes",{event:"*",schema:"public",table:"couple_settings",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .on("postgres_changes",{event:"*",schema:"public",table:"couple_notes",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
       .on("postgres_changes",{event:"*",schema:"public",table:"couple_member_preferences",filter:`couple_id=eq.${cfg.COUPLE_ID}`},()=>loadData().catch(()=>{}))
