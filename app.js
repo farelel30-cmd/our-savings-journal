@@ -31,9 +31,9 @@
     const todayShort = new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(today).replace(/[.]/g,"").toUpperCase();
     $("currentDayLabel").textContent = todayShort;
     $("currentWeekBadge").textContent = `Hari ini · ${dateFmt(todayISO,{day:"numeric",month:"short"})}`;
-    $("nextMondayDay").textContent = today.getDate();
     const nextDepositMonday = new Date(thisMonday+"T12:00:00");
     if (!wasSkipped && today.getDay() !== 1 && today.getDay() !== 0) nextDepositMonday.setDate(nextDepositMonday.getDate()+7);
+    $("nextMondayDay").textContent = nextDepositMonday.getDate();
     const nextDepositISO = `${nextDepositMonday.getFullYear()}-${String(nextDepositMonday.getMonth()+1).padStart(2,"0")}-${String(nextDepositMonday.getDate()).padStart(2,"0")}`;
     $("weekDateText").textContent = wasSkipped
       ? `Jadwal sebelumnya dilewati · setoran berikutnya Senin, ${dateFmt(nextDepositISO,{day:"numeric",month:"short"})}.`
